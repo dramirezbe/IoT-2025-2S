@@ -1,160 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>ESP32 LED Monitor & Control</title>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 40px; }
-        #circle {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: #222;
-            margin: 0 auto 20px auto;
-            box-shadow: 0 0 20px #888;
-            transition: background 0.5s;
-        }
-        #status { margin: 20px 0; font-weight: bold; }
-        .connected { color: green; }
-        .disconnected { color: red; }
-        .connecting { color: orange; }
-        #control-panel {
-            border: 1px solid #ccc;
-            padding: 20px;
-            width: 300px;
-            margin: 30px auto;
-            text-align: left;
-        }
-        #control-panel label, #control-panel input, #control-panel button {
-            display: block;
-            width: 90%;
-            margin-bottom: 10px;
-        }
-        #control-panel input[type="number"] {
-            padding: 5px;
-        }
-        #control-panel textarea {
-            resize: vertical;
-            padding: 5px;
-            height: 60px;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>ESP32 LED Monitor & Control</title>
+
+  <!-- Tipografías -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h2>ESP32 LED Monitor & Control</h2>
-    <div id="circle"></div>
-    <div id="status" class="connecting">Conectando a MQTT...</div>
-    <div>Color actual: <span id="colorText">---</span></div>
-    <div>Mensajes recibidos: <span id="messageCount">0</span></div>
+  <h2>ESP32 LED Monitor &amp; Control</h2>
 
-    <div id="control-panel">
-        <h3>Ajustes del ESP32</h3>
-        <label for="interval">Intervalo de cambio (segundos):</label>
-        <input type="number" id="interval" value="2" min="1">
+  <div id="circle" aria-hidden="true"></div>
 
-        <label for="colors">Secuencia de Colores (separados por coma, ej: red,green,blue):</label>
-        <textarea id="colors">red,green,blue</textarea>
+  <div id="status" class="connecting">Conectando a MQTT...</div>
 
-        <button onclick="sendConfig()">Enviar Configuración</button>
-        <div id="config-status"></div>
-    </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-    <script>
-        // --- CONFIGURACIÓN MQTT GLOBAL ---
-        const brokerHost = "18.218.20.155";
-        const brokerPort = 9001;
-        const topicMonitor = "esp32/led"; // Para recibir el color actual
-        const topicConfig = "esp32/config"; // Para enviar la configuración
-        const username = "esp32";
-        const password = "13310625"; // Contraseña Correcta
-        // ---------------------------------
+  <div class="info-line">
+    <span>Color actual: <strong id="colorText">---</strong></span>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <span>Mensajes recibidos: <strong id="messageCount">0</strong></span>
+  </div>
 
-        const colorMap = {
-            red: "#ff0000",
-            green: "#00ff00",
-            blue: "#0000ff"
-        };
+  <div id="control-panel">
+    <h3>Ajustes del ESP32</h3>
 
-        let client;
-        let messageCount = 0;
+    <label for="interval">Intervalo de cambio (segundos):</label>
+    <input type="number" id="interval" value="2" min="1" />
 
-        window.onload = function() {
-            client = new Paho.MQTT.Client(brokerHost, brokerPort, "webclient_" + Math.random().toString(16).substr(2, 8));
-            client.onConnectionLost = onConnectionLost;
-            client.onMessageArrived = onMessageArrived;
-            connectBroker();
-        };
+    <label for="colors">Secuencia de Colores (separados por coma, ej: red,green,blue):</label>
+    <textarea id="colors">red,green,blue</textarea>
 
-        function connectBroker() {
-            const connectOptions = {
-                userName: username,
-                password: password,
-                timeout: 10,
-                keepAliveInterval: 30,
-                onSuccess: function() {
-                    console.log("Conectado exitosamente a MQTT broker");
-                    document.getElementById('status').textContent = "Conectado a MQTT";
-                    document.getElementById('status').className = "connected";
-                    client.subscribe(topicMonitor);
-                    console.log("Suscrito al topic: " + topicMonitor);
-                },
-                onFailure: function(error) {
-                    console.log("Error de conexión: " + error.errorMessage);
-                    document.getElementById('status').textContent = "Fallo la conexión MQTT: " + error.errorMessage;
-                    document.getElementById('status').className = "disconnected";
-                }
-            };
-            console.log("Intentando conectar a: " + brokerHost + ":" + brokerPort);
-            client.connect(connectOptions);
-        }
+    <button id="sendConfigBtn" type="button">Enviar Configuración</button>
+    <div id="config-status" role="status" aria-live="polite"></div>
+  </div>
 
-        function onConnectionLost(responseObject) {
-            console.log("Conexión perdida: " + responseObject.errorMessage);
-            document.getElementById('status').textContent = "Desconectado de MQTT";
-            document.getElementById('status').className = "disconnected";
-        }
+  <!-- Paho MQTT (no-module) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
-        function onMessageArrived(message) {
-            // Este es el color actual que nos envía el ESP32
-            const color = message.payloadString.toLowerCase();
-            messageCount++;
-
-            document.getElementById('colorText').textContent = color;
-            document.getElementById('messageCount').textContent = messageCount;
-            document.getElementById('circle').style.background = colorMap[color] || "#222";
-        }
-
-        // Función para enviar la configuración al ESP32
-        function sendConfig() {
-            if (!client || !client.isConnected()) {
-                document.getElementById('config-status').textContent = "Error: No conectado al broker.";
-                return;
-            }
-
-            const interval = parseInt(document.getElementById('interval').value);
-            const colors = document.getElementById('colors').value.trim();
-
-            if (isNaN(interval) || interval < 1) {
-                document.getElementById('config-status').textContent = "Error: El intervalo debe ser un número positivo.";
-                return;
-            }
-
-            // Creamos un objeto JSON con la configuración
-            const configPayload = {
-                interval_sec: interval,
-                colors: colors
-            };
-
-            const payloadString = JSON.stringify(configPayload);
-
-            const message = new Paho.MQTT.Message(payloadString);
-            message.destinationName = topicConfig;
-
-            client.send(message);
-
-            document.getElementById('config-status').textContent = "Configuración enviada. Intervalo: " + interval + "s. Colores: " + colors;
-            console.log("Configuración JSON enviada al topic " + topicConfig + ": " + payloadString);
-        }
-    </script>
+  <!-- App JS (module) -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
