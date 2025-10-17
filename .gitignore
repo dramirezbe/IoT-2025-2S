@@ -58,3 +58,10 @@ dkms.conf
 #vscode
 
 **/.vscode/
+
+
+
+#build
+
+**/build/
+**/.devcontainer/

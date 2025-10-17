@@ -1,0 +1,23 @@
+dependencies:
+  cmd_ieee802154_debug:
+    dependencies: []
+    source:
+      path: /home/javastral/esp/v5.5.1/esp-idf/examples/ieee802154/components/cmd_ieee802154_debug
+      type: local
+    version: '*'
+  cmd_system:
+    dependencies: []
+    source:
+      path: /home/javastral/esp/v5.5.1/esp-idf/examples/system/console/advanced/components/cmd_system
+      type: local
+    version: '*'
+  idf:
+    source:
+      type: idf
+    version: 5.5.1
+direct_dependencies:
+- cmd_ieee802154_debug
+- cmd_system
+manifest_hash: 6babb32eaccc9ed8f3860d8bf055644bcf7300927428a963bb5eca86f9cc75aa
+target: esp32c6
+version: 2.0.0
